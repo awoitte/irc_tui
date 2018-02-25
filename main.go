@@ -6,9 +6,9 @@ func main() {
 
 	messages := make(chan string)
 	quit := make(chan bool)
-	input := make(chan string)
-	go connect_to_irc(messages, input)
-	go show_messages(messages, quit, input)
+	commands := make(chan string)
+	go connect_to_irc(messages, commands)
+	go show_messages(messages, quit, commands)
 
 	for {
 		select {

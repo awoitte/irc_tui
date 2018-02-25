@@ -12,6 +12,16 @@ func get_first_n_characters_in_string(in_string string, n int) string {
 	return string(runes[:end])
 }
 
+func remove_last_letter(text string) string {
+	new_length := int_max(0, len(text)-1)
+	return get_first_n_characters_in_string(text, new_length)
+}
+
+func remove_first_letter(text string) string {
+	new_length := int_max(0, len(text)-1)
+	return get_last_n_characters_in_string(text, new_length)
+}
+
 func int_max(a, b int) int {
 	if a > b {
 		return a
