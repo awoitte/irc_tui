@@ -1,14 +1,29 @@
 package main
 
-import "time"
+import (
+	"fmt"
+	"os"
+	"time"
+)
 
 func main() {
-
+	args := os.Args[1:]
+	if len(args) < 2 {
+		fmt.Println("usage: irc_tui server[:port] name")
+		return
+	}
 	messages := make(chan string)
 	quit := make(chan bool)
 	commands := make(chan string)
-	go connect_to_irc(messages, commands)
-	go show_messages(messages, quit, commands)
+
+	irc, err := connect_to_irc(args[0], args[1])
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	irc.attach_listeners(messages, commands, quit)
+	show_messages(messages, quit, commands)
 
 	for {
 		select {
