@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	irc "github.com/awoitte/irc"
+	irc "github.com/awoitte/irc_client"
 )
 
 func connect_to_irc(chat_messages, commands chan string) {
