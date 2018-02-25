@@ -78,7 +78,7 @@ func convert_command_to_raw_message(command Command) string {
 	case "PART":
 		return fmt.Sprintf("PART #%v", arguments[0])
 	case "QUIT":
-		return fmt.Sprintf("QUIT", arguments[0])
+		return fmt.Sprintf("QUIT")
 	case "MSG":
 		return fmt.Sprintf("PRIVMSG #%v %v", arguments[0], strings.Join(arguments[1:], " "))
 	case "WHISPER":
