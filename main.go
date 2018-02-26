@@ -12,9 +12,9 @@ func main() {
 		fmt.Println("usage: irc_tui server[:port] name")
 		return
 	}
-	messages := make(chan string)
+	chat_messages := make(chan string)
 	quit := make(chan bool)
-	commands := make(chan string)
+	user_input := make(chan string)
 
 	irc, err := connect_to_irc(args[0], args[1])
 	if err != nil {
@@ -22,8 +22,8 @@ func main() {
 		return
 	}
 
-	irc.attach_listeners(messages, commands, quit)
-	show_messages(messages, quit, commands)
+	irc.attach_listeners(chat_messages, user_input, quit)
+	start_tui(chat_messages, quit, user_input)
 
 	for {
 		select {

@@ -8,6 +8,8 @@ import (
 	irc "github.com/awoitte/irc_client"
 )
 
+const read_chunk_size = 128
+
 type IRC_client struct {
 	connection *irc.IRC
 }
@@ -30,13 +32,13 @@ func connect_to_irc(server, name string) (*IRC_client, error) {
 	return &IRC_client{&connection}, nil
 }
 
-func (client *IRC_client) attach_listeners(chat_messages, commands chan string, quit chan bool) {
+func (client *IRC_client) attach_listeners(chat_messages, user_input chan string, quit chan bool) {
 	go get_irc_messages(client.connection, chat_messages)
-	go dispatch_commands(client.connection, commands, chat_messages, quit)
+	go dispatch_commands(client.connection, user_input, chat_messages, quit)
 }
 
 func get_irc_messages(connection *irc.IRC, messages chan string) {
-	connection.ReadLoop(func(message string) error {
+	connection.ReadLoop(read_chunk_size, func(message string) error {
 		messages <- message
 		if message == "QUIT" {
 			close(messages)
@@ -45,17 +47,4 @@ func get_irc_messages(connection *irc.IRC, messages chan string) {
 
 		return nil
 	})
-}
-
-func dispatch_commands(connection *irc.IRC, commands, chat_messages chan string, quit chan bool) {
-	for {
-		command := <-commands
-		translated := translate_command(command)
-		chat_messages <- translated
-		connection.SendRaw(translated)
-		if translated == "QUIT" {
-			quit <- true
-			break
-		}
-	}
 }

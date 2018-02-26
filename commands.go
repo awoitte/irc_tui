@@ -1,89 +1,143 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"strings"
+
+	irc "github.com/awoitte/irc_client"
 )
 
 type Command struct {
+	name            string
+	description     string
+	arguments       []string
+	execute_command func(*Command, *irc.IRC, chan bool) error
+}
+
+type ParsedInput struct {
 	name      string
 	arguments []string
 }
 
-var command_list = map[string][]string{
-	"JOIN":    {"join a channel", "channel name"},
-	"PART":    {"leave a channel", "channel name"},
-	"MSG":     {"send message to a channel", "channel name", "message"},
-	"WHISPER": {"send message to a user", "user", "message"},
-	"QUIT":    {"leave the server"},
+var (
+	command_list []Command
+)
+
+func dispatch_commands(
+	connection *irc.IRC,
+	user_input,
+	chat_messages chan string,
+	quit chan bool) {
+
+	init_commands()
+
+	for {
+		command_text := <-user_input
+		command := convert_into_command(command_text)
+		err := command.execute_command(&command, connection, quit)
+		if err != nil {
+			log.Print("couldn't match command: ", command.name)
+		}
+	}
 }
 
-func translate_command(command_string string) string {
+func init_commands() {
+	command_list = []Command{
+		Command{
+			"JOIN",
+			"join a channel",
+			[]string{"<channel name>"},
+			join_command},
+		Command{
+			"PART",
+			"leave a channel",
+			[]string{"<channel name>"},
+			part_command},
+		Command{
+			"MSG",
+			"send message to a channel",
+			[]string{"<channel name>", "<message>"},
+			message_command},
+		Command{
+			"WHISPER",
+			"send message to a user",
+			[]string{"<user>", "<message>"},
+			whisper_command},
+		Command{
+			"QUIT",
+			"leave the server",
+			[]string{},
+			quit_command},
+		Command{
+			"HELP",
+			"show this message",
+			[]string{},
+			help_command},
+		Command{
+			"RAW",
+			"send unaltered command to the server",
+			[]string{"<command>"},
+			raw_command}}
+}
 
-	if strings.Index(command_string, ":") == 0 {
-		command := convert_into_command(command_string)
-		return convert_command_to_raw_message(command)
-
-	}
-	fmt.Println("not a command, treating as raw", command_string)
-
-	return command_string
+func get_command_list() []Command {
+	return command_list
 }
 
 func convert_into_command(text string) Command {
-	arguments := strings.Split(text, " ")
-	name := strings.Replace(arguments[0], ":", "", 1)
-	NAME := strings.ToUpper(name)
-	command := Command{NAME, arguments[1:]}
-
-	return validate_command(command)
+	parsed := parse_input(text)
+	command_description := get_command_named(parsed.name)
+	return convert_parsed_to_command(parsed, command_description)
 }
 
-func validate_command(command Command) Command {
-	command_description, ok := match_command_description(&command)
-
-	if ok != true || len(command.arguments) < len(command_description)-1 {
-		fmt.Println("incorrect name or number of arguments. requires %v", len(command_description))
-		return Command{"INVALID", []string{}}
-	}
-
-	return command
-}
-
-func match_command_description(command *Command) ([]string, bool) {
-	command_description, ok := command_list[command.name]
-	if ok != true {
-		return check_if_command_starts_with(command)
-	}
-	return command_description, true
-}
-
-func check_if_command_starts_with(command *Command) ([]string, bool) {
-	for full_name, description := range command_list {
-		if strings.Index(full_name, command.name) == 0 {
-			command.name = full_name
-			return description, true
+func get_command_named(name string) (command *Command) {
+	for _, description := range command_list {
+		if strings.HasPrefix(description.name, name) {
+			return &description
 		}
 	}
-	return nil, false
+	return nil
 }
 
-//TODO: this should be stored in one struct
-func convert_command_to_raw_message(command Command) string {
-	arguments := command.arguments
+func parse_input(text string) ParsedInput {
+	text_parts := strings.Split(text, " ")
+	name := strings.Replace(text_parts[0], ":", "", 1)
+	NAME := strings.ToUpper(name)
 
-	switch command.name {
-	case "JOIN":
-		return fmt.Sprintf("JOIN #%v", arguments[0])
-	case "PART":
-		return fmt.Sprintf("PART #%v", arguments[0])
-	case "QUIT":
-		return fmt.Sprintf("QUIT")
-	case "MSG":
-		return fmt.Sprintf("PRIVMSG #%v %v", arguments[0], strings.Join(arguments[1:], " "))
-	case "WHISPER":
-		return fmt.Sprintf("PRIVMSG %v %v", arguments[0], strings.Join(arguments[1:], " "))
+	arguments := []string{}
+	if len(text_parts) > 1 {
+		arguments = text_parts[1:]
 	}
-	fmt.Println("name didn't match %v", command.name)
-	return ""
+
+	return ParsedInput{
+		NAME,
+		arguments}
+}
+
+func convert_parsed_to_command(parsed ParsedInput, command_description *Command) Command {
+
+	if command_description != nil {
+		is_valid := validate_command_arguments(command_description, parsed.arguments)
+
+		if is_valid {
+			command := *command_description
+			command.arguments = parsed.arguments
+			return command
+		}
+	}
+
+	return Command{
+		"INVALID",
+		"incorrect name or number of arguments",
+		[]string{},
+		invalid_command}
+
+}
+
+func validate_command_arguments(command_description *Command, arguments []string) bool {
+	if command_description != nil && len(arguments) >= len(command_description.arguments) {
+		return true
+	}
+
+	return false
 }
