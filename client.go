@@ -43,7 +43,9 @@ func get_irc_messages(connection *irc.IRC, messages chan string) {
 		lines := strings.Split(cleaned_message, "\n")
 
 		for _, line := range lines {
-			messages <- line
+			if strings.TrimSpace(line) != "" {
+				messages <- line
+			}
 		}
 
 		return nil
