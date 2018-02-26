@@ -11,14 +11,13 @@ import (
 
 func join_command(command *Command, connection *irc.IRC, quit chan bool) error {
 	arguments := command.arguments
-	connection.SendRaw(fmt.Sprintf("JOIN #%v", arguments[0]))
-	return nil
+	err := connection.JoinChannel(arguments[0])
+	return err
 }
 
 func part_command(command *Command, connection *irc.IRC, quit chan bool) error {
-	arguments := command.arguments
-	connection.SendRaw(fmt.Sprintf("PART #%v", arguments[0]))
-	return nil
+	err := connection.PartChannel()
+	return err
 }
 
 func quit_command(command *Command, connection *irc.IRC, quit chan bool) error {
@@ -29,9 +28,9 @@ func quit_command(command *Command, connection *irc.IRC, quit chan bool) error {
 
 func message_command(command *Command, connection *irc.IRC, quit chan bool) error {
 	arguments := command.arguments
-	translated := fmt.Sprintf("PRIVMSG #%v %v", arguments[0], strings.Join(arguments[1:], " "))
-	connection.SendRaw(translated)
-	return nil
+	message := strings.Join(arguments, " ")
+	err := connection.SendMessage(message)
+	return err
 }
 
 func whisper_command(command *Command, connection *irc.IRC, quit chan bool) error {

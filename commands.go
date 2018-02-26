@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"strings"
 
 	irc "github.com/awoitte/irc_client"
@@ -37,7 +37,7 @@ func dispatch_commands(
 		command := convert_into_command(command_text)
 		err := command.execute_command(&command, connection, quit)
 		if err != nil {
-			log.Print("couldn't match command: ", command.name)
+			chat_messages <- fmt.Sprint("ERROR: ", err)
 		}
 	}
 }
@@ -52,12 +52,12 @@ func init_commands() {
 		Command{
 			"PART",
 			"leave a channel",
-			[]string{"<channel name>"},
+			[]string{},
 			part_command},
 		Command{
 			"MSG",
 			"send message to a channel",
-			[]string{"<channel name>", "<message>"},
+			[]string{"<message>"},
 			message_command},
 		Command{
 			"WHISPER",
