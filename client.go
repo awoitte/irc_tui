@@ -39,10 +39,11 @@ func (client *IRC_client) attach_listeners(chat_messages, user_input chan string
 
 func get_irc_messages(connection *irc.IRC, messages chan string) {
 	connection.ReadLoop(read_chunk_size, func(message string) error {
-		messages <- message
-		if message == "QUIT" {
-			close(messages)
-			return errors.New("IRC Session quit")
+		cleaned_message := strings.Replace(message, "\r", "", -1)
+		lines := strings.Split(cleaned_message, "\n")
+
+		for _, line := range lines {
+			messages <- line
 		}
 
 		return nil

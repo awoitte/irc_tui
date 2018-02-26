@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
+
+	tui "github.com/awoitte/input_output_tui"
 )
 
 func main() {
@@ -22,15 +23,7 @@ func main() {
 		return
 	}
 
-	irc.attach_listeners(chat_messages, user_input, quit)
-	start_tui(chat_messages, quit, user_input)
+	irc.attach_listeners(user_input, chat_messages, quit)
 
-	for {
-		select {
-		case <-quit:
-			return
-		default:
-			time.Sleep(time.Second)
-		}
-	}
+	tui.Start(chat_messages, user_input, quit)
 }

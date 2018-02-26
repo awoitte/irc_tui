@@ -33,6 +33,7 @@ func dispatch_commands(
 
 	for {
 		command_text := <-user_input
+		chat_messages <- command_text
 		command := convert_into_command(command_text)
 		err := command.execute_command(&command, connection, quit)
 		if err != nil {
