@@ -3,15 +3,13 @@ package main
 import (
 	"fmt"
 	"strings"
-
-	irc "github.com/awoitte/irc_client"
 )
 
 type Command struct {
 	name            string
 	description     string
 	arguments       []string
-	execute_command func(*Command, *irc.IRC, chan bool) error
+	execute_command func(*Command, IRC_Connection, chan bool) error
 }
 
 type ParsedInput struct {
@@ -24,7 +22,7 @@ var (
 )
 
 func dispatch_commands(
-	connection *irc.IRC,
+	connection IRC_Connection,
 	user_input,
 	chat_messages chan string,
 	quit chan bool) {
@@ -81,10 +79,6 @@ func init_commands() {
 			raw_command}}
 }
 
-func get_command_list() []Command {
-	return command_list
-}
-
 func convert_into_command(text string) Command {
 	parsed := parse_input(text)
 	command_description := get_command_named(parsed.name)
@@ -92,8 +86,9 @@ func convert_into_command(text string) Command {
 }
 
 func get_command_named(name string) (command *Command) {
+	NAME := strings.ToUpper(name)
 	for _, description := range command_list {
-		if strings.HasPrefix(description.name, name) {
+		if strings.HasPrefix(description.name, NAME) {
 			return &description
 		}
 	}
@@ -103,7 +98,6 @@ func get_command_named(name string) (command *Command) {
 func parse_input(text string) ParsedInput {
 	text_parts := strings.Split(text, " ")
 	name := strings.Replace(text_parts[0], ":", "", 1)
-	NAME := strings.ToUpper(name)
 
 	arguments := []string{}
 	if len(text_parts) > 1 {
@@ -111,7 +105,7 @@ func parse_input(text string) ParsedInput {
 	}
 
 	return ParsedInput{
-		NAME,
+		name,
 		arguments}
 }
 
@@ -125,13 +119,19 @@ func convert_parsed_to_command(parsed ParsedInput, command_description *Command)
 			command.arguments = parsed.arguments
 			return command
 		}
+		return Command{
+			"INVALID",
+			"incorrect name or number of arguments",
+			[]string{},
+			invalid_command}
+
 	}
 
 	return Command{
 		"INVALID",
-		"incorrect name or number of arguments",
-		[]string{},
-		invalid_command}
+		"no matching command, assuming this is a message",
+		append([]string{parsed.name}, parsed.arguments...), //"prepend"
+		message_command}
 
 }
 

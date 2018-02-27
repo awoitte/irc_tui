@@ -11,7 +11,7 @@ import (
 const read_chunk_size = 128
 
 type IRC_client struct {
-	connection *irc.IRC
+	connection IRC_Connection
 }
 
 func connect_to_irc(server, name string) (*IRC_client, error) {
@@ -26,7 +26,7 @@ func connect_to_irc(server, name string) (*IRC_client, error) {
 
 	tcp, err := irc.TCPConnect(connection_details[0], connection_details[1])
 	if err != nil {
-		return nil, fmt.Errorf("Error connecting via TCP: ", err)
+		return nil, fmt.Errorf("Error connecting via TCP: %v", err)
 	}
 	connection := irc.Connect(name, tcp)
 	return &IRC_client{&connection}, nil
@@ -37,7 +37,7 @@ func (client *IRC_client) attach_listeners(chat_messages, user_input chan string
 	go dispatch_commands(client.connection, user_input, chat_messages, quit)
 }
 
-func get_irc_messages(connection *irc.IRC, messages chan string) {
+func get_irc_messages(connection IRC_Connection, messages chan string) {
 	connection.ReadLoop(read_chunk_size, func(message string) error {
 		cleaned_message := strings.Replace(message, "\r", "", -1)
 		lines := strings.Split(cleaned_message, "\n")
